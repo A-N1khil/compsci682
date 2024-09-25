@@ -72,7 +72,7 @@ def svm_loss_vectorized(W, X, y, reg):
   dW = np.zeros(W.shape) # initialize the gradient as zero
 
   #############################################################################
-  # TODO:                                                                     #
+  # 1TODO:                                                                     #
   # Implement a vectorized version of the structured SVM loss, storing the    #
   # result in loss.                                                           #
   #############################################################################
@@ -105,7 +105,7 @@ def svm_loss_vectorized(W, X, y, reg):
 
 
   #############################################################################
-  # TODO:                                                                     #
+  # [DoneTODO]:                                                                     #
   # Implement a vectorized version of the gradient for the structured SVM     #
   # loss, storing the result in dW.                                           #
   #                                                                           #
