@@ -36,6 +36,7 @@ class LinearClassifier(object):
 
     # Run stochastic gradient descent to optimize W
     loss_history = []
+    grad_history = []
     for it in range(num_iters):
       X_batch = None
       y_batch = None
@@ -66,6 +67,7 @@ class LinearClassifier(object):
       # evaluate loss and gradient
       loss, grad = self.loss(X_batch, y_batch, reg)
       loss_history.append(loss)
+      grad_history.append(grad)
 
       # perform parameter update
       #########################################################################
@@ -84,7 +86,7 @@ class LinearClassifier(object):
       if verbose and it % 100 == 0:
         print('iteration %d / %d: loss %f' % (it, num_iters, loss))
 
-    return loss_history
+    return loss_history, grad_history
 
   def predict(self, X):
     """
