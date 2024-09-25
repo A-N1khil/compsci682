@@ -24,11 +24,54 @@ def softmax_loss_naive(W, X, y, reg):
   dW = np.zeros_like(W)
 
   #############################################################################
-  # TODO: Compute the softmax loss and its gradient using explicit loops.     #
+  # 1TODO: Compute the softmax loss and its gradient using explicit loops.     #
   # Store the loss in loss and the gradient in dW. If you are not careful     #
   # here, it is easy to run into numeric instability. Don't forget the        #
   # regularization!                                                           #
   #############################################################################
+
+  num_train = X.shape[0]
+  num_classes = W.shape[1]
+  for i in range(num_train):
+
+    # compute scores
+    scores_i = X[i].dot(W)
+
+    # normalize scores to prevent numerical instability
+    scores_i -= np.max(scores_i)
+
+    exponent_scores_i = np.exp(scores_i)
+    exponent_scores_sum_i = np.sum(exponent_scores_i)
+
+    # compute loss
+    prob = exponent_scores_i / exponent_scores_sum_i
+
+    # Add the loss of the correct class => -log(prob[y[i]])
+    # Since it is - log, we can term loss = loss + (-log(prog[correct_class])) = loss - log(prob[correct_class])
+    loss -= np.log(prob[y[i]])
+
+    # Gradient for the correct class
+    dW[:, y[i]] += (prob[y[i]] - 1) * X[i]
+
+    # Compute the gradient
+    for j in range(num_classes):
+      if j == y[i]:
+        # We have already computed the gradient for the correct class
+        continue
+      dW[:, j] += prob[j] * X[i]
+
+  # Average the loss
+  loss /= num_train
+
+  # Add regularization to the loss
+  loss += reg * np.sum(W * W)
+
+  # Average the gradient
+  dW /= num_train
+
+  # Add regularization to the gradient
+  dW += 2 * reg * W
+
   pass
   #############################################################################
   #                          END OF YOUR CODE                                 #
@@ -53,6 +96,43 @@ def softmax_loss_vectorized(W, X, y, reg):
   # here, it is easy to run into numeric instability. Don't forget the        #
   # regularization!                                                           #
   #############################################################################
+
+  # Compute the scores
+  scores = X.dot(W)
+
+  # Subtract the maximum score from each row to prevent numerical instability
+  scores -= np.max(scores, axis=1, keepdims=True)
+
+  # Softmax loss calculation
+  exponent_scores = np.exp(scores)
+  sum_exponent_scores = np.sum(exponent_scores, axis=1, keepdims=True)
+
+  # Compute the probabilities
+  probs = exponent_scores / sum_exponent_scores
+
+  # Computing the loss
+  correct_class_probs = probs[np.arange(X.shape[0]), y]
+  loss = np.sum(-np.log(correct_class_probs))
+
+  # Average the loss
+  loss /= X.shape[0]
+
+  # Add regularization to the loss
+  loss += reg * np.sum(W * W)
+
+  # Compute the gradient
+
+  # Gradient for the correct class
+  probs[np.arange(X.shape[0]), y] -= 1
+
+  dW = X.T.dot(probs)
+
+  # Average the gradient
+  dW /= X.shape[0]
+
+  # Add regularization to the gradient
+  dW += 2 * reg * W
+
   pass
   #############################################################################
   #                          END OF YOUR CODE                                 #
