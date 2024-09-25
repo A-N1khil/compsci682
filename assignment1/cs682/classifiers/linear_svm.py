@@ -34,8 +34,8 @@ def svm_loss_naive(W, X, y, reg):
       margin = scores[j] - correct_class_score + 1 # note delta = 1
       if margin > 0:
         loss += margin
-        dW[:, y[i]] -= X[i] # increase the gradient of the correct class
         dW[:, j] += X[i] # decrease the gradient of the incorrect class
+        dW[:, y[i]] -= X[i] # increase the gradient of the correct class
 
   # Right now the loss is a sum over all training examples, but we want it
   # to be an average instead so we divide by num_train.
@@ -81,7 +81,7 @@ def svm_loss_vectorized(W, X, y, reg):
   scores = X.dot(W)
 
   # Correct class scores
-  num_train = X.shape[0]
+  num_train = len(y)
   correct_class_scores = scores[np.arange(num_train), y]
 
   # Add a new axis to the correct class scores to allow broadcasting
@@ -93,7 +93,7 @@ def svm_loss_vectorized(W, X, y, reg):
   # Remove the margin for the correct class
   margins[np.arange(num_train), y] = 0
 
-  loss = np.sum(margins) / num_train  # Average the loss over all training examples
+  loss = np.sum(np.fmax(margins, 0)) / num_train  # Average the loss over all training examples
 
   # Add regularization to the loss
   loss += reg * np.sum(W * W)
@@ -115,7 +115,7 @@ def svm_loss_vectorized(W, X, y, reg):
   #############################################################################
 
   # Assume a binary matrix M where B[i, j] = True if margin > 0, False otherwise
-  binary_matrix = margins > 0
+  binary_matrix = (margins > 0).astype(int)
 
   # Calculate the sum of all the positive margins for each training example
   row_sum = np.sum(binary_matrix, axis=1)
