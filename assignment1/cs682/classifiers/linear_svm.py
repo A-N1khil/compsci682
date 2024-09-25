@@ -76,6 +76,28 @@ def svm_loss_vectorized(W, X, y, reg):
   # Implement a vectorized version of the structured SVM loss, storing the    #
   # result in loss.                                                           #
   #############################################################################
+
+  # Compute the scores
+  scores = X.dot(W)
+
+  # Correct class scores
+  num_train = X.shape[0]
+  correct_class_scores = scores[np.arange(num_train), y]
+
+  # Add a new axis to the correct class scores to allow broadcasting
+  correct_class_scores = correct_class_scores[:, np.newaxis]
+
+  # Compute the margins
+  margins = np.maximum(0, scores - correct_class_scores + 1)
+
+  # Remove the margin for the correct class
+  margins[np.arange(num_train), y] = 0
+
+  loss = np.sum(margins) / num_train  # Average the loss over all training examples
+
+  # Add regularization to the loss
+  loss += reg * np.sum(W * W)
+
   pass
   #############################################################################
   #                             END OF YOUR CODE                              #
@@ -91,6 +113,25 @@ def svm_loss_vectorized(W, X, y, reg):
   # to reuse some of the intermediate values that you used to compute the     #
   # loss.                                                                     #
   #############################################################################
+
+  # Assume a binary matrix M where B[i, j] = True if margin > 0, False otherwise
+  binary_matrix = margins > 0
+
+  # Calculate the sum of all the positive margins for each training example
+  row_sum = np.sum(binary_matrix, axis=1)
+
+  # Subtract the number of positive margins for the correct class from the binary matrix
+  binary_matrix[np.arange(num_train), y] = -row_sum
+
+  # Compute the gradient
+  dW = X.T.dot(binary_matrix)
+
+  # Average the gradient over all training examples
+  dW /= num_train
+
+  # Add regularization to the gradient
+  dW += 2 * reg * W
+
   pass
   #############################################################################
   #                             END OF YOUR CODE                              #
