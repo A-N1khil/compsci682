@@ -214,9 +214,17 @@ class TwoLayerNet(object):
       y_batch = None
 
       #########################################################################
-      # TODO: Create a random minibatch of training data and labels, storing  #
+      # 3TODO: Create a random minibatch of training data and labels, storing  #
       # them in X_batch and y_batch respectively.                             #
       #########################################################################
+
+      # Generate random indices (borrowed code from previously done linear_classifier.py)
+      indices_for_batch = np.random.choice(num_train, batch_size)
+
+      # Get the batch data
+      X_batch = X[indices_for_batch]
+      y_batch = y[indices_for_batch]
+
       pass
       #########################################################################
       #                             END OF YOUR CODE                          #
@@ -232,6 +240,14 @@ class TwoLayerNet(object):
       # using stochastic gradient descent. You'll need to use the gradients   #
       # stored in the grads dictionary defined above.                         #
       #########################################################################
+
+      # Update the weights and biases according to the gradients and the learning rate
+      self.params['W1'] -= learning_rate * grads['W1']
+      self.params['b1'] -= learning_rate * grads['b1']
+      self.params['W2'] -= learning_rate * grads['W2']
+      self.params['b2'] -= learning_rate * grads['b2']
+
+
       pass
       #########################################################################
       #                             END OF YOUR CODE                          #
@@ -277,6 +293,19 @@ class TwoLayerNet(object):
     ###########################################################################
     # TODO: Implement this function; it should be VERY simple!                #
     ###########################################################################
+
+    # Complete the forward pass
+    scores_1 = X.dot(self.params['W1']) + self.params['b1']
+    # Activate the scores using ReLU
+    a1 = np.maximum(0, scores_1)
+
+    # Calculate the scores for the second layer
+    scores_2 = a1.dot(self.params['W2']) + self.params['b2']
+
+    # Assign the predicted labels
+    y_pred = np.argmax(scores_2, axis=1)
+
+
     pass
     ###########################################################################
     #                              END OF YOUR CODE                           #
