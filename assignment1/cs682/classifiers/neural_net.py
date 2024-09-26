@@ -2,6 +2,8 @@ from __future__ import print_function
 
 import numpy as np
 import matplotlib.pyplot as plt
+from sympy.stats.rv import probability
+
 
 class TwoLayerNet(object):
   """
@@ -71,10 +73,24 @@ class TwoLayerNet(object):
     # Compute the forward pass
     scores = None
     #############################################################################
-    # TODO: Perform the forward pass, computing the class scores for the input. #
+    # 1TODO: Perform the forward pass, computing the class scores for the input. #
     # Store the result in the scores variable, which should be an array of      #
     # shape (N, C).                                                             #
     #############################################################################
+
+    # Scores for the first layer => s = XW + b (bias)
+    scores_1 = X.dot(W1) + b1
+    # Activating via ReLU => ReLU(z) = max(0, z) => Convert all negative values to 0
+    a1 = np.maximum(0, scores_1)
+
+    # Scores for the second layer => s = XW + b (bias)
+    # Now the input is the output of the first layer => scores_1
+    scores_2 = a1.dot(W2) + b2
+
+    # Since we are only using a two layer network, we can directly assign the scores to the final scores
+    scores = scores_2
+
+
     pass
     #############################################################################
     #                              END OF YOUR CODE                             #
@@ -87,11 +103,24 @@ class TwoLayerNet(object):
     # Compute the loss
     loss = None
     #############################################################################
-    # TODO: Finish the forward pass, and compute the loss. This should include  #
+    # 2TODO: Finish the forward pass, and compute the loss. This should include  #
     # both the data loss and L2 regularization for W1 and W2. Store the result  #
     # in the variable loss, which should be a scalar. Use the Softmax           #
     # classifier loss.                                                          #
     #############################################################################
+
+    # Calculate the softmax loss
+    ##############################
+    # Note to future self: Refer to the softmax.py file for the explanation of the softmax loss.
+    # I will be using the same code here, but with fewer variables than before.
+    ##############################
+    # Shift the scores to avoid numerical instability
+    exponent_scores = np.exp(scores - np.max(scores, axis=1, keepdims=True))
+    probs = exponent_scores / np.sum(exponent_scores, axis=1, keepdims=True)
+    correct_class_prob = -np.log(probs[np.arange(N), y])
+    # loss with regularization => L = -log(correct_class_prob) + reg * (sum(W1^2) + sum(W2^2))
+    loss = np.sum(correct_class_prob) / N + reg * (np.sum(W1 * W1) + np.sum(W2 * W2))
+
     pass
     #############################################################################
     #                              END OF YOUR CODE                             #
@@ -104,6 +133,46 @@ class TwoLayerNet(object):
     # and biases. Store the results in the grads dictionary. For example,       #
     # grads['W1'] should store the gradient on W1, and be a matrix of same size #
     #############################################################################
+
+    # Calculate the gradient of the loss with respect to the scores
+    # Reshape the probs N x C
+    dscores = probs.reshape(N, -1)
+    dscores[np.arange(N), y] -= 1 # Subtract 1 from the correct class probabilities
+
+    # Backpropagate the gradient to the parameters
+    # Gradient of the loss with respect to W2
+    # dL/dW2 = X1^T * dscores, where X1 is the output of the first layer (relu)
+    dW2 = a1.T.dot(dscores)
+    dW2 /= N # Average the gradient over all training examples
+    dW2 += 2 * reg * W2 # Add regularization to the gradient
+
+    # Gradient of the loss with respect to b2
+    # dL/db2 = sum(dscores), where sum is the sum over all training examples
+    db2 = np.sum(dscores, axis=0) / N
+
+    # Save the params to the grads dictionary
+    grads['W2'] = dW2
+    grads['b2'] = db2
+
+    # Backpropagate the gradient to the first layer
+    # dA1 = dscores * W2^T
+    dA1 = dscores.dot(W2.T)
+    # dZ1 = dA1 * (scores_1 > 0), because ReLU(z) = max(0, z) => dReLU(z)/dz = 1 if z > 0, 0 otherwise
+    dZ1 = dA1 * (scores_1 > 0)
+    # Gradient of the loss with respect to W1
+    # dL/dW1 = X^T * dZ1
+    dW1 = X.T.dot(dZ1)
+    dW1 /= N # Average the gradient over all training examples
+    dW1 += 2 * reg * W1 # Add regularization to the gradient
+
+    # Gradient of the loss with respect to b1
+    # dL/db1 = sum(dZ1), where sum is the sum over all training examples
+    db1 = np.sum(dZ1, axis=0) / N
+
+    # Save the params to the grads dictionary
+    grads['W1'] = dW1
+    grads['b1'] = db1
+
     pass
     #############################################################################
     #                              END OF YOUR CODE                             #
@@ -145,9 +214,17 @@ class TwoLayerNet(object):
       y_batch = None
 
       #########################################################################
-      # TODO: Create a random minibatch of training data and labels, storing  #
+      # 3TODO: Create a random minibatch of training data and labels, storing  #
       # them in X_batch and y_batch respectively.                             #
       #########################################################################
+
+      # Generate random indices (borrowed code from previously done linear_classifier.py)
+      indices_for_batch = np.random.choice(num_train, batch_size)
+
+      # Get the batch data
+      X_batch = X[indices_for_batch]
+      y_batch = y[indices_for_batch]
+
       pass
       #########################################################################
       #                             END OF YOUR CODE                          #
@@ -163,6 +240,14 @@ class TwoLayerNet(object):
       # using stochastic gradient descent. You'll need to use the gradients   #
       # stored in the grads dictionary defined above.                         #
       #########################################################################
+
+      # Update the weights and biases according to the gradients and the learning rate
+      self.params['W1'] -= learning_rate * grads['W1']
+      self.params['b1'] -= learning_rate * grads['b1']
+      self.params['W2'] -= learning_rate * grads['W2']
+      self.params['b2'] -= learning_rate * grads['b2']
+
+
       pass
       #########################################################################
       #                             END OF YOUR CODE                          #
@@ -208,6 +293,19 @@ class TwoLayerNet(object):
     ###########################################################################
     # TODO: Implement this function; it should be VERY simple!                #
     ###########################################################################
+
+    # Complete the forward pass
+    scores_1 = X.dot(self.params['W1']) + self.params['b1']
+    # Activate the scores using ReLU
+    a1 = np.maximum(0, scores_1)
+
+    # Calculate the scores for the second layer
+    scores_2 = a1.dot(self.params['W2']) + self.params['b2']
+
+    # Assign the predicted labels
+    y_pred = np.argmax(scores_2, axis=1)
+
+
     pass
     ###########################################################################
     #                              END OF YOUR CODE                           #
