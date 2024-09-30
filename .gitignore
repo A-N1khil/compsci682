@@ -3,3 +3,6 @@
 **/*.DS_Store
 **/scratch.ipynb
 **/Answers.MD
+
+# Zip files created during submission
+**/*.zip
