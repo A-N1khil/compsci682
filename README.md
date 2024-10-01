@@ -1,5 +1,15 @@
 # Repo for assignment code of COMPSCI 682 - Neural Networks: A Modern Intro
 
+# Contents
+1. [Assignment 1](#assignment-1)  
+    - [Goals](#goals)
+    - [Q1: k-Nearest Neighbor classifier](#q1-k-nearest-neighbor-classifier-20-points)
+    - [Q2: Training a Support Vector Machine](#q2-training-a-support-vector-machine-25-points)
+    - [Q3: Implement a Softmax classifier](#q3-implement-a-softmax-classifier-20-points)
+    - [Q4: Two-Layer Neural Network](#q4-two-layer-neural-network-25-points)
+    - [Q5: Higher Level Representations: Image Features](#q5-higher-level-representations-image-features-10-points)
+    - [Q6: Cool Bonus: Do something extra!](#q6-cool-bonus-do-something-extra-10-points)
+
 # Assignment 1
 ## Goals
 In this assignment you will practice putting together a simple image classification pipeline, based on the k-Nearest Neighbor or the SVM/Softmax classifier. The goals of this assignment are as follows:  
