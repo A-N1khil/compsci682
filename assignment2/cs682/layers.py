@@ -63,6 +63,23 @@ def affine_backward(dout, cache):
     ###########################################################################
     # TODO: Implement the affine backward pass.                               #
     ###########################################################################
+
+    # Computing the gradients
+    # dx = dout * w.T (w.T is the transpose of w)
+    # dout => (N, M), w.T => (M, D), dx => (N, D)
+    dx = np.dot(dout, w.T)
+    # However, we need to reshape dx to the shape of x
+    dx = dx.reshape(x.shape)
+
+    # dw = x.T * dout (x.T is the transpose of x)
+    # x.T => (D, N), dout => (N, M), dw => (D, M)
+    # But first, we need to reshape x to 2D array
+    x_reshaped = x.reshape(x.shape[0], -1)
+    dw = np.dot(x_reshaped.T, dout)
+
+    # db = sum(dout)
+    db = np.sum(dout, axis=0)
+
     pass
     ###########################################################################
     #                             END OF YOUR CODE                            #
