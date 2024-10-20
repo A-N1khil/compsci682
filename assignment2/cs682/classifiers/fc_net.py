@@ -214,6 +214,28 @@ class FullyConnectedNet(object):
         # beta2, etc. Scale parameters should be initialized to ones and shift     #
         # parameters should be initialized to zeros.                               #
         ############################################################################
+
+        # Note to self:
+        # W1 should be of the dimensions (D, H1) => (input_dim, hidden_dim[0])
+        # b1 should be of the dimensions (H1,) => (hidden_dim[0],)
+        # W2 should be of the dimensions (H1, H2) => (hidden_dim[0], hidden_dim[1])
+        # b2 should be of the dimensions (H2,) => (hidden_dim[1],)
+        # This would mean that we will have to add special cases for the first and last layers. Which can be handled if used np.hstack
+
+        dimensions_arr = np.hstack((input_dim, hidden_dims, num_classes)) # Will give an array of dimensions [input_dim, hidden_dim[0], hidden_dim[1], ..., num_classes]
+
+        # Now, we can iterate over the dimensions_arr to initialize the weights and biases
+        for index in range(self.num_layers):
+            # For, i=0 (first layer), W1 should be of the dimensions (D, H1) => (input_dim, hidden_dim[0]) => dimensions_arr[0], dimensions_arr[1]
+            # For, i=1 (second layer), W2 should be of the dimensions (H1, H2) => (hidden_dim[0], hidden_dim[1]) => dimensions_arr[1], dimensions_arr[2]
+            # For the last layer, W3 should be of the dimensions (H2, C) => (hidden_dim[1], num_classes) => dimensions_arr[-2], dimensions_arr[-1]
+            self.params[f"W{index + 1}"] = np.random.randn(dimensions_arr[index], dimensions_arr[index + 1]) * weight_scale
+
+            # For, i=0 (first layer), b1 should be of the dimensions (H1,) => (hidden_dim[0],) => dimensions_arr[1]
+            # For, i=1 (second layer), b2 should be of the dimensions (H2,) => (hidden_dim[1],) => dimensions_arr[2]
+            # For the last layer, b3 should be of the dimensions (C,) => (num_classes,) => dimensions_arr[-1]
+            self.params[f"b{index + 1}"] = np.zeros(dimensions_arr[index + 1])
+
         pass
         ############################################################################
         #                             END OF YOUR CODE                             #
@@ -273,6 +295,24 @@ class FullyConnectedNet(object):
         # self.bn_params[1] to the forward pass for the second batch normalization #
         # layer, etc.                                                              #
         ############################################################################
+
+        # Creating a cache list to store the cache for each layer
+        caches = {}
+
+        # We will iterate over the all the layers from first to n-1
+        for layer in range(self.num_layers - 1):
+            # Extracting the parameters for the layer
+            W = self.params[f"W{layer + 1}"]
+            b = self.params[f"b{layer + 1}"]
+
+            # We can use the affine_relu_forward and affine_forward functions from the layer_utils.py file
+            X, caches[layer] = affine_relu_forward(X, W, b)
+
+        # For the last layer, we will use the affine_forward function
+        W = self.params[f"W{self.num_layers}"]
+        b = self.params[f"b{self.num_layers}"]
+        scores, caches[self.num_layers - 1] = affine_forward(X, W, b)
+
         pass
         ############################################################################
         #                             END OF YOUR CODE                             #
@@ -296,6 +336,37 @@ class FullyConnectedNet(object):
         # automated tests, make sure that your L2 regularization includes a factor #
         # of 0.5 to simplify the expression for the gradient.                      #
         ############################################################################
+
+        loss, dscores = softmax_loss(scores, y)
+
+        # Adding regularization loss across all layers
+        for layer in range(self.num_layers):
+            W = self.params[f"W{layer + 1}"]
+            reg_term = 0.5 * self.reg * np.sum(W * W)
+            loss += reg_term
+
+        # For the last layer, we will simply use the affine_backward function
+        # Remember that we have indexed the caches from 0, so the last layer cache will be caches[self.num_layers - 1]
+        dout, dw, db = affine_backward(dscores, caches[self.num_layers - 1])
+
+        # Save these to grads
+        grads[f"W{self.num_layers}"] = dw + self.reg * self.params[f"W{self.num_layers}"]
+        grads[f"b{self.num_layers}"] = db
+
+        # Now, we will iterate over the layers from n-1 to 0
+        # Start off with the penultimate layer and keep decreasing by 1 until we reach 0
+        # Since we have indexed the caches from 0, the penultimate layer will be self.num_layers - 2
+        for layer in range(self.num_layers - 2, -1, -1):
+            # Extract the cache for the layer
+            cache = caches[layer]
+
+            # Compute the gradients like we did previously, but this time we use the affine_relu_backward function
+            dout, dW, db = affine_relu_backward(dout, cache)
+
+            # Save these to grads
+            grads[f"W{layer + 1}"] = dW + self.reg * self.params[f"W{layer + 1}"]
+            grads[f"b{layer + 1}"] = db
+
         pass
         ############################################################################
         #                             END OF YOUR CODE                             #
