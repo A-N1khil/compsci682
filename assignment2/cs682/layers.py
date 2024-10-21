@@ -190,7 +190,7 @@ def batchnorm_forward(x, gamma, beta, bn_param):
     out, cache = None, None
     if mode == 'train':
         #######################################################################
-        # TODO: Implement the training-time forward pass for batch norm.      #
+        # TODO1: Implement the training-time forward pass for batch norm.      #
         # Use minibatch statistics to compute the mean and variance, use      #
         # these statistics to normalize the incoming data, and scale and      #
         # shift the normalized data using gamma and beta.                     #
@@ -210,17 +210,44 @@ def batchnorm_forward(x, gamma, beta, bn_param):
         # Referencing the original paper (https://arxiv.org/abs/1502.03167)   #
         # might prove to be helpful.                                          #
         #######################################################################
+
+        # Compute the mean and variance
+        sample_mean = np.mean(x, axis=0)
+        sample_variance = np.var(x, axis=0)
+
+        # Normalize the data
+        # Do add eps for numerical stability
+        x_normalized = (x - sample_mean) / np.sqrt(sample_variance + eps)
+
+        # Scale and shift the normalized data
+        out = gamma * x_normalized + beta
+
+        # Update the running mean and variance
+        running_mean = momentum * running_mean + (1 - momentum) * sample_mean
+        running_var = momentum * running_var + (1 - momentum) * sample_variance
+
+        # Store the cache in order we have calculated above
+        # Order isn't important, but I do have OCD
+        cache = (x, x_normalized, sample_mean, sample_variance, gamma, beta, eps)
+
         pass
         #######################################################################
         #                           END OF YOUR CODE                          #
         #######################################################################
     elif mode == 'test':
         #######################################################################
-        # TODO: Implement the test-time forward pass for batch normalization. #
+        # TODO2: Implement the test-time forward pass for batch normalization. #
         # Use the running mean and variance to normalize the incoming data,   #
         # then scale and shift the normalized data using gamma and beta.      #
         # Store the result in the out variable.                               #
         #######################################################################
+
+        # Use the running mean and variance to normalize the incoming data
+        x_normalized = (x - running_mean) / np.sqrt(running_var + eps)
+
+        # Scale and shift the normalized data
+        out = gamma * x_normalized + beta
+
         pass
         #######################################################################
         #                          END OF YOUR CODE                           #
@@ -259,6 +286,39 @@ def batchnorm_backward(dout, cache):
     # Referencing the original paper (https://arxiv.org/abs/1502.03167)       #
     # might prove to be helpful.                                              #
     ###########################################################################
+
+    # Unpack the variables
+    x, x_normalized, sample_mean, sample_variance, gamma, beta, eps = cache
+
+    # Unpack the dimensions
+    N = x.shape[0]
+
+    # Compute gradient with respect to gamma
+    # dL/dgamma = sum(dL/dout * dout/dgamma)
+    # dout/dgamma = x_normalized
+    dgamma = np.sum(dout * x_normalized, axis=0)
+
+    # Compute gradient with respect to beta
+    # dL/dbeta = sum(dL/dout * dout/dbeta)
+    # dout/dbeta = 1
+    dbeta = np.sum(dout, axis=0)
+
+    # For calculating dx, we need to calculate the gradient of x_normalized, sample_mean, and sample_variance
+    # dL/dx_normalized = dL/dout * dout/dx_normalized
+    # dout/dx_normalized = gamma
+    dx_normalized = dout * gamma
+
+    # Now to calculate the gradient of sample_variance
+    dsample_var = np.sum(dx_normalized * (x - sample_mean) * -0.5 * (sample_variance + eps) ** (-3 / 2), axis=0)
+
+    # Now to calculate the gradient of sample_mean
+    dsample_mean = (np.sum(dx_normalized * -1 / np.sqrt(sample_variance + eps), axis=0)
+                    + dsample_var * np.sum(-2 * (x - sample_mean), axis=0) / N)
+
+    # Since, we have calculated the gradient of x_normalized, sample_mean, and sample_variance
+    # We can now calculate the gradient of x
+    dx = dx_normalized / np.sqrt(sample_variance + eps) + dsample_var * 2 * (x - sample_mean) / N + dsample_mean / x.shape[0]
+
     pass
     ###########################################################################
     #                             END OF YOUR CODE                            #
@@ -659,7 +719,7 @@ def spatial_groupnorm_forward(x, gamma, beta, G, gn_param):
     - cache: Values needed for the backward pass
     """
     out, cache = None, None
-    eps = gn_param.get('eps',1e-5)
+    eps = gn_param.get('eps', 1e-5)
     ###########################################################################
     # TODO: Implement the forward pass for spatial group normalization.       #
     # This will be extremely similar to the layer norm implementation.        #
