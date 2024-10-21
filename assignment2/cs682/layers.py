@@ -22,9 +22,18 @@ def affine_forward(x, w, b):
     """
     out = None
     ###########################################################################
-    # TODO: Implement the affine forward pass. Store the result in out. You   #
+    # TODO1: Implement the affine forward pass. Store the result in out. You   #
     # will need to reshape the input into rows.                               #
     ###########################################################################
+
+    # Reshape x to 2D array
+    # x.shape[0] is N, x.shape[1:] is (d_1, ..., d_k)
+    x_reshaped = x.reshape(x.shape[0], -1)
+
+    # Compute the forward pass
+    # out = x * w + b
+    out = np.dot(x_reshaped, w) + b
+
     pass
     ###########################################################################
     #                             END OF YOUR CODE                            #
@@ -52,8 +61,25 @@ def affine_backward(dout, cache):
     x, w, b = cache
     dx, dw, db = None, None, None
     ###########################################################################
-    # TODO: Implement the affine backward pass.                               #
+    # TODO2: Implement the affine backward pass.                               #
     ###########################################################################
+
+    # Computing the gradients
+    # dx = dout * w.T (w.T is the transpose of w)
+    # dout => (N, M), w.T => (M, D), dx => (N, D)
+    dx = np.dot(dout, w.T)
+    # However, we need to reshape dx to the shape of x
+    dx = dx.reshape(x.shape)
+
+    # dw = x.T * dout (x.T is the transpose of x)
+    # x.T => (D, N), dout => (N, M), dw => (D, M)
+    # But first, we need to reshape x to 2D array
+    x_reshaped = x.reshape(x.shape[0], -1)
+    dw = np.dot(x_reshaped.T, dout)
+
+    # db = sum(dout)
+    db = np.sum(dout, axis=0)
+
     pass
     ###########################################################################
     #                             END OF YOUR CODE                            #
@@ -74,8 +100,12 @@ def relu_forward(x):
     """
     out = None
     ###########################################################################
-    # TODO: Implement the ReLU forward pass.                                  #
+    # TODO3: Implement the ReLU forward pass.                                  #
     ###########################################################################
+
+    # ReLU activation function => f(x) = max(0, x)
+    out = np.maximum(0, x)
+
     pass
     ###########################################################################
     #                             END OF YOUR CODE                            #
@@ -97,8 +127,13 @@ def relu_backward(dout, cache):
     """
     dx, x = None, cache
     ###########################################################################
-    # TODO: Implement the ReLU backward pass.                                 #
+    # TODO4: Implement the ReLU backward pass.                                 #
     ###########################################################################
+
+    # The derivative of ReLU activation function is 1 if x > 0, otherwise 0
+    dx = dout
+    dx[x < 0] = 0
+
     pass
     ###########################################################################
     #                             END OF YOUR CODE                            #
