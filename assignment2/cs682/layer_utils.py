@@ -104,3 +104,58 @@ def conv_relu_pool_backward(dout, cache):
     da = relu_backward(ds, relu_cache)
     dx, dw, db = conv_backward_fast(da, conv_cache)
     return dx, dw, db
+
+def affine_batchnorm_relu_forward(X, W, b, gamma, beta, param):
+    """
+    Convenience layer that performs an affine transform followed by a batchnorm and ReLU
+    Inputs:
+        X: Input to the affine layer
+        W, b: Weights for the affine layer
+        gamma, beta: Weights for the batchnorm layer
+        param: Dictionary with parameters for the batchnorm layer
+    Outputs:
+        out: Output from the ReLU
+        cache: Object to give to the backward pass
+    """
+
+    # First thing we do, is affine the forward pass
+    a, fp_cache = affine_forward(X, W, b)
+
+    # Next, we do the batchnorm forward pass
+    bn, bn_cache = batchnorm_forward(a, gamma, beta, param)
+
+    # Finally, we do the ReLU forward pass
+    out, relu_cache = relu_forward(bn)
+
+    # Store all the caches
+    cache = (fp_cache, bn_cache, relu_cache)
+
+    # Return the output and the cache
+    return out, cache
+
+
+def affine_batchnorm_relu_backward(dout, cache):
+    """
+    Backward pass for the affine-batchnorm-relu convenience layer
+    Inputs:
+        dout: Upstream derivative
+        cache: Tuple of caches from the forward pass
+    Outputs:
+        dx, dw, db, dgamma, dbeta: Gradients with respect to the input, weights, biases, gamma and beta
+    """
+
+    # Unpack the caches
+    fp_cache, bn_cache, relu_cache = cache
+
+    # First, we do the ReLU backward pass
+    drbp = relu_backward(dout, relu_cache)
+
+    # Next, we do the batchnorm backward pass
+    dbn, dgamma, dbeta = batchnorm_backward(drbp, bn_cache)
+
+    # Finally, we do the affine backward pass
+    dx, dw, db = affine_backward(dbn, fp_cache)
+
+    return dx, dw, db, dgamma, dbeta
+
+
