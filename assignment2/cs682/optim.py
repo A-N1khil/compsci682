@@ -62,7 +62,7 @@ def sgd_momentum(w, dw, config=None):
 
     next_w = None
     ###########################################################################
-    # TODO: Implement the momentum update formula. Store the updated value in #
+    # TODO2: Implement the momentum update formula. Store the updated value in #
     # the next_w variable. You should also use and update the velocity v.     #
     ###########################################################################
 
@@ -108,19 +108,27 @@ def adam(w, dw, config=None):
 
     next_w = None
     ###########################################################################
-    # TODO: Implement the Adam update formula, storing the next value of w in #
+    # TOD03: Implement the Adam update formula, storing the next value of w in #
     # the next_w variable. Don't forget to update the m, v, and t variables   #
     # stored in config.                                                       #
     #                                                                         #
     # NOTE: In order to match the reference output, please modify t _before_  #
     # using it in any calculations.                                           #
     ###########################################################################
-    config['t'] += 1
-    config['m'] = config['beta1'] * config['m'] + (1 - config['beta1']) * dw
-    mt = config['m'] / (1 - config['beta1']**config['t'])
-    config['v'] = config['beta2'] * config['v'] + (1 - config['beta2']) * dw**2
-    vt = config['v'] / (1 - config['beta2']**config['t'])
-    next_w = w - config['learning_rate'] * mt / (np.sqrt(vt) + config['epsilon'])
+
+    # Unpacking values
+    lr, epsilon, beta1, beta2 = config['learning_rate'], config['epsilon'], config['beta1'], config['beta2']
+    m, v, t = config['m'], config['v'], config['t']
+
+    t += 1
+    m = beta1 * m + (1 - beta1) * dw
+    mt = m / (1 - beta1 ** t)
+    v = beta2 * v + (1 - beta2) * dw ** 2
+    vt = v / (1 - beta2 ** t)
+    next_w = w - lr * mt / (np.sqrt(vt) + epsilon)
+
+    # update values
+    config['m'], config['v'], config['t'] = m, v, t
     ###########################################################################
     #                             END OF YOUR CODE                            #
     ###########################################################################

@@ -190,7 +190,7 @@ def batchnorm_forward(x, gamma, beta, bn_param):
     out, cache = None, None
     if mode == 'train':
         #######################################################################
-        # TODO: Implement the training-time forward pass for batch norm.      #
+        # TODO1: Implement the training-time forward pass for batch norm.      #
         # Use minibatch statistics to compute the mean and variance, use      #
         # these statistics to normalize the incoming data, and scale and      #
         # shift the normalized data using gamma and beta.                     #
@@ -210,17 +210,49 @@ def batchnorm_forward(x, gamma, beta, bn_param):
         # Referencing the original paper (https://arxiv.org/abs/1502.03167)   #
         # might prove to be helpful.                                          #
         #######################################################################
+
+        # Compute the mean and variance
+        sample_mean = np.mean(x, axis=0)
+        sample_variance = np.var(x, axis=0)
+
+        # Normalize the data
+        # Do add eps for numerical stability
+        x_normalized = (x - sample_mean) / np.sqrt(sample_variance + eps)
+
+        # Scale and shift the normalized data
+        out = gamma * x_normalized + beta
+
+        # Update the running mean and variance
+        # LN edit: We do not need to update the running mean and variance if layernorm is True
+        layernorm = bn_param.get('layernorm', False)
+        if not layernorm:
+            running_mean = momentum * running_mean + (1 - momentum) * sample_mean
+            running_var = momentum * running_var + (1 - momentum) * sample_variance
+
+        # Store the cache in order we have calculated above
+        # Order isn't important, but I do have OCD
+        # LN edit: We need to set the axis = 1 when working with layernorm
+        axis = 1 if layernorm else 0
+        cache = (x, x_normalized, sample_mean, sample_variance, gamma, beta, eps, axis)
+
         pass
         #######################################################################
         #                           END OF YOUR CODE                          #
         #######################################################################
     elif mode == 'test':
         #######################################################################
-        # TODO: Implement the test-time forward pass for batch normalization. #
+        # TODO2: Implement the test-time forward pass for batch normalization. #
         # Use the running mean and variance to normalize the incoming data,   #
         # then scale and shift the normalized data using gamma and beta.      #
         # Store the result in the out variable.                               #
         #######################################################################
+
+        # Use the running mean and variance to normalize the incoming data
+        x_normalized = (x - running_mean) / np.sqrt(running_var + eps)
+
+        # Scale and shift the normalized data
+        out = gamma * x_normalized + beta
+
         pass
         #######################################################################
         #                          END OF YOUR CODE                           #
@@ -254,11 +286,44 @@ def batchnorm_backward(dout, cache):
     """
     dx, dgamma, dbeta = None, None, None
     ###########################################################################
-    # TODO: Implement the backward pass for batch normalization. Store the    #
+    # TODO3: Implement the backward pass for batch normalization. Store the    #
     # results in the dx, dgamma, and dbeta variables.                         #
     # Referencing the original paper (https://arxiv.org/abs/1502.03167)       #
     # might prove to be helpful.                                              #
     ###########################################################################
+
+    # Unpack the variables
+    x, x_normalized, sample_mean, sample_variance, gamma, beta, eps, axis = cache
+
+    # Unpack the dimensions
+    N = x.shape[0]
+
+    # Compute gradient with respect to gamma
+    # dL/dgamma = sum(dL/dout * dout/dgamma)
+    # dout/dgamma = x_normalized
+    dgamma = np.sum(dout * x_normalized, axis=axis)
+
+    # Compute gradient with respect to beta
+    # dL/dbeta = sum(dL/dout * dout/dbeta)
+    # dout/dbeta = 1
+    dbeta = np.sum(dout, axis=axis)
+
+    # For calculating dx, we need to calculate the gradient of x_normalized, sample_mean, and sample_variance
+    # dL/dx_normalized = dL/dout * dout/dx_normalized
+    # dout/dx_normalized = gamma
+    dx_normalized = dout * gamma
+
+    # Now to calculate the gradient of sample_variance
+    dsample_var = np.sum(dx_normalized * (x - sample_mean) * -0.5 * (sample_variance + eps) ** (-3 / 2), axis=0)
+
+    # Now to calculate the gradient of sample_mean
+    dsample_mean = (np.sum(dx_normalized * -1 / np.sqrt(sample_variance + eps), axis=0)
+                    + dsample_var * np.sum(-2 * (x - sample_mean), axis=0) / N)
+
+    # Since, we have calculated the gradient of x_normalized, sample_mean, and sample_variance
+    # We can now calculate the gradient of x
+    dx = dx_normalized / np.sqrt(sample_variance + eps) + dsample_var * 2 * (x - sample_mean) / N + dsample_mean / x.shape[0]
+
     pass
     ###########################################################################
     #                             END OF YOUR CODE                            #
@@ -283,13 +348,31 @@ def batchnorm_backward_alt(dout, cache):
     """
     dx, dgamma, dbeta = None, None, None
     ###########################################################################
-    # TODO: Implement the backward pass for batch normalization. Store the    #
+    # TODO4: Implement the backward pass for batch normalization. Store the    #
     # results in the dx, dgamma, and dbeta variables.                         #
     #                                                                         #
     # After computing the gradient with respect to the centered inputs, you   #
     # should be able to compute gradients with respect to the inputs in a     #
     # single statement; our implementation fits on a single 80-character line.#
     ###########################################################################
+
+    # Unpack the variables
+    # LN Edit: Unpack axis too
+    x, x_normalized, sample_mean, sample_variance, gamma, beta, eps, axis = cache
+    N = dout.shape[0]
+
+    # Compute gradient with respect to gamma and beta
+    dgamma = np.sum(dout * x_normalized, axis=axis)
+    dbeta = np.sum(dout, axis=axis)
+
+    # Compute gradient with respect to x_normalized
+    dx_normalized = dout * gamma
+
+    # Finding the gradient of mean and variance
+    inv_var = 1.0 / np.sqrt(sample_variance + eps)
+    dx = (1. / N) * inv_var * (N * dx_normalized - np.sum(dx_normalized, axis=0)
+                               - x_normalized * np.sum(dx_normalized * x_normalized, axis=0))
+
     pass
     ###########################################################################
     #                             END OF YOUR CODE                            #
@@ -323,7 +406,7 @@ def layernorm_forward(x, gamma, beta, ln_param):
     out, cache = None, None
     eps = ln_param.get('eps', 1e-5)
     ###########################################################################
-    # TODO: Implement the training-time forward pass for layer norm.          #
+    # TODO5: Implement the training-time forward pass for layer norm.          #
     # Normalize the incoming data, and scale and  shift the normalized data   #
     #  using gamma and beta.                                                  #
     # HINT: this can be done by slightly modifying your training-time         #
@@ -332,7 +415,20 @@ def layernorm_forward(x, gamma, beta, ln_param):
     # transformations you could perform, that would enable you to copy over   #
     # the batch norm code and leave it almost unchanged?                      #
     ###########################################################################
-    pass
+
+    # Set the mode to 'train' as we are training the model
+    ln_param['mode'] = 'train'
+
+    # Set the layernorm to True
+    ln_param['layernorm'] = True
+
+    # We can use the batchnorm_forward function to calculate the layernorm
+    # NOTE TO SELF: We need to reshape the gamma and beta to (D, 1) to match the shape of x
+    # and X would be transposed so that we can apply layernorm
+    out, cache = batchnorm_forward(x.T, gamma.reshape(-1, 1), beta.reshape(-1, 1), ln_param)
+
+    # However, we need to reshape the output to the original shape
+    out = out.T
     ###########################################################################
     #                             END OF YOUR CODE                            #
     ###########################################################################
@@ -357,12 +453,20 @@ def layernorm_backward(dout, cache):
     """
     dx, dgamma, dbeta = None, None, None
     ###########################################################################
-    # TODO: Implement the backward pass for layer norm.                       #
+    # TODO6: Implement the backward pass for layer norm.                       #
     #                                                                         #
     # HINT: this can be done by slightly modifying your training-time         #
     # implementation of batch normalization. The hints to the forward pass    #
     # still apply!                                                            #
     ###########################################################################
+
+    # transpose dout because we transposed the input, x, during the forward pass
+    # dgama and dbeta are the same as batchnorm_backward
+    dx, dgamma, dbeta = batchnorm_backward(dout.T, cache)
+
+    # transpose gradients w.r.t. input, x, to their original dims
+    dx = dx.T  # (N,D)
+
     pass
     ###########################################################################
     #                             END OF YOUR CODE                            #
@@ -659,7 +763,7 @@ def spatial_groupnorm_forward(x, gamma, beta, G, gn_param):
     - cache: Values needed for the backward pass
     """
     out, cache = None, None
-    eps = gn_param.get('eps',1e-5)
+    eps = gn_param.get('eps', 1e-5)
     ###########################################################################
     # TODO: Implement the forward pass for spatial group normalization.       #
     # This will be extremely similar to the layer norm implementation.        #
