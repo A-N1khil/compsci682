@@ -238,7 +238,7 @@ class FullyConnectedNet(object):
 
             # If we are using batch normalization, we will have to initialize the gamma and beta parameters
             # Normalization is not used for the last layer, hence we will not initialize the gamma and beta for the last layer
-            if self.normalization == 'batchnorm' and index != self.num_layers - 1:
+            if self.normalization and index != self.num_layers - 1:
                 # Scale params to be initialized to ones
                 self.params[f"gamma{index + 1}"] = np.ones(dimensions_arr[index + 1])
                 # Shift params to be initialized to zeros
@@ -312,7 +312,7 @@ class FullyConnectedNet(object):
             W = self.params[f"W{layer + 1}"]
             b = self.params[f"b{layer + 1}"]
 
-            if self.normalization == 'batchnorm':
+            if self.normalization:
                 # If the normalization is batchnorm, we will use the affine_bn_relu_forward function
                 # Extract the gamma and beta parameters
                 gamma = self.params[f"gamma{layer + 1}"]
@@ -323,7 +323,7 @@ class FullyConnectedNet(object):
                 # As stated in the note above, have to pass self.bn_params[0] to the forward pass for the first batch normalization layer
                 # and pass self.bn_params[1] to the forward pass for the second batch normalization layer
                 # thus effectively making the index of the bn_params list as the layer number
-                X, caches[layer] = affine_batchnorm_relu_forward(X, W, b, gamma, beta, self.bn_params[layer])
+                X, caches[layer] = affine_batchnorm_relu_forward(X, W, b, gamma, beta, self.bn_params[layer], self.normalization)
             else:
                 # We can use the affine_relu_forward and affine_forward functions from the layer_utils.py file
                 X, caches[layer] = affine_relu_forward(X, W, b)
@@ -384,8 +384,8 @@ class FullyConnectedNet(object):
             # Extract the cache for the layer
             cache = caches[layer]
 
-            if self.normalization == 'batchnorm':
-                dout, dW, db, dgamma, dbeta = affine_batchnorm_relu_backward(dout, cache)
+            if self.normalization:
+                dout, dW, db, dgamma, dbeta = affine_batchnorm_relu_backward(dout, cache, self.normalization)
 
                 # Save dgama and dbeta to grads
                 grads[f"gamma{layer + 1}"] = dgamma
