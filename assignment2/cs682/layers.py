@@ -509,17 +509,29 @@ def dropout_forward(x, dropout_param):
 
     if mode == 'train':
         #######################################################################
-        # TODO: Implement training phase forward pass for inverted dropout.   #
+        # TODO8: Implement training phase forward pass for inverted dropout.   #
         # Store the dropout mask in the mask variable.                        #
         #######################################################################
+
+        # Create a mask of the same shape as x
+        # Dividing by p for inverted dropout
+        mask = (np.random.rand(*x.shape) < p) / p
+
+        # Apply the mask to the input
+        out = x * mask
+
         pass
         #######################################################################
         #                           END OF YOUR CODE                          #
         #######################################################################
     elif mode == 'test':
         #######################################################################
-        # TODO: Implement the test phase forward pass for inverted dropout.   #
+        # TODO9: Implement the test phase forward pass for inverted dropout.   #
         #######################################################################
+
+        # In test mode, we just return the input
+        out = x
+
         pass
         #######################################################################
         #                            END OF YOUR CODE                         #
@@ -545,8 +557,12 @@ def dropout_backward(dout, cache):
     dx = None
     if mode == 'train':
         #######################################################################
-        # TODO: Implement training phase backward pass for inverted dropout   #
+        # TODO10: Implement training phase backward pass for inverted dropout   #
         #######################################################################
+
+        # Since we have stored the mask in the cache, we can use it to calculate dx
+        dx = dout * mask # Back propagate the upstream derivatives through the mask
+
         pass
         #######################################################################
         #                          END OF YOUR CODE                           #
