@@ -229,7 +229,7 @@ class FullyConnectedNet(object):
             # For, i=0 (first layer), W1 should be of the dimensions (D, H1) => (input_dim, hidden_dim[0]) => dimensions_arr[0], dimensions_arr[1]
             # For, i=1 (second layer), W2 should be of the dimensions (H1, H2) => (hidden_dim[0], hidden_dim[1]) => dimensions_arr[1], dimensions_arr[2]
             # For the last layer, W3 should be of the dimensions (H2, C) => (hidden_dim[1], num_classes) => dimensions_arr[-2], dimensions_arr[-1]
-            self.params[f"W{index + 1}"] = np.random.randn(dimensions_arr[index], dimensions_arr[index + 1]) * weight_scale
+            self.params[f"W{index + 1}"] = np.random.normal(0, weight_scale, (dimensions_arr[index], dimensions_arr[index + 1]))
 
             # For, i=0 (first layer), b1 should be of the dimensions (H1,) => (hidden_dim[0],) => dimensions_arr[1]
             # For, i=1 (second layer), b2 should be of the dimensions (H2,) => (hidden_dim[1],) => dimensions_arr[2]
