@@ -6,3 +6,6 @@
 
 # Zip files created during submission
 **/*.zip
+
+# VS Code settings file
+**/.vscode/*

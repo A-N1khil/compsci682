@@ -203,7 +203,7 @@ class FullyConnectedNet(object):
         self.params = {}
 
         ############################################################################
-        # TODO: Initialize the parameters of the network, storing all values in    #
+        # TODO1: Initialize the parameters of the network, storing all values in    #
         # the self.params dictionary. Store weights and biases for the first layer #
         # in W1 and b1; for the second layer use W2 and b2, etc. Weights should be #
         # initialized from a normal distribution centered at 0 with standard       #
@@ -229,7 +229,7 @@ class FullyConnectedNet(object):
             # For, i=0 (first layer), W1 should be of the dimensions (D, H1) => (input_dim, hidden_dim[0]) => dimensions_arr[0], dimensions_arr[1]
             # For, i=1 (second layer), W2 should be of the dimensions (H1, H2) => (hidden_dim[0], hidden_dim[1]) => dimensions_arr[1], dimensions_arr[2]
             # For the last layer, W3 should be of the dimensions (H2, C) => (hidden_dim[1], num_classes) => dimensions_arr[-2], dimensions_arr[-1]
-            self.params[f"W{index + 1}"] = np.random.randn(dimensions_arr[index], dimensions_arr[index + 1]) * weight_scale
+            self.params[f"W{index + 1}"] = np.random.normal(0, weight_scale, (dimensions_arr[index], dimensions_arr[index + 1]))
 
             # For, i=0 (first layer), b1 should be of the dimensions (H1,) => (hidden_dim[0],) => dimensions_arr[1]
             # For, i=1 (second layer), b2 should be of the dimensions (H2,) => (hidden_dim[1],) => dimensions_arr[2]
@@ -328,6 +328,13 @@ class FullyConnectedNet(object):
                 # We can use the affine_relu_forward and affine_forward functions from the layer_utils.py file
                 X, caches[layer] = affine_relu_forward(X, W, b)
 
+            # If we are using dropout, we will have to pass the 
+            # Note to self: The dp_cache will be stored in the caches dictionary with the key as dropout{layer + 1}
+            # Hence, extracting this would be different than simply extracting the layer cache
+            if self.use_dropout:
+                X, dp_cache = dropout_forward(X, self.dropout_param)
+                caches[f'dropout{layer + 1}'] = dp_cache
+
         # For the last layer, we will use the affine_forward function
         W = self.params[f"W{self.num_layers}"]
         b = self.params[f"b{self.num_layers}"]
@@ -383,6 +390,10 @@ class FullyConnectedNet(object):
         for layer in reversed(range(self.num_layers - 1)):
             # Extract the cache for the layer
             cache = caches[layer]
+
+            # If we are using dropout, then we will have to perform the back prop for dropout
+            if self.use_dropout:
+                dout = dropout_backward(dout, caches[f'dropout{layer + 1}'])
 
             if self.normalization:
                 dout, dW, db, dgamma, dbeta = affine_batchnorm_relu_backward(dout, cache, self.normalization)
