@@ -596,8 +596,8 @@ def conv_forward_naive(x, w, b, conv_param):
 
     Returns a tuple of:
     - out: Output data, of shape (N, F, H', W') where H' and W' are given by
-      H' = 1 + (H + 2 * pad - HH) / stride
-      W' = 1 + (W + 2 * pad - WW) / stride
+      H' = 1 + (H - HH) / stride
+      W' = 1 + (W - WW) / stride
     - cache: (x, w, b, conv_param)
     """
     out = None
@@ -616,7 +616,7 @@ def conv_forward_naive(x, w, b, conv_param):
     # Calculate the output shape
     # Not to self: Use // to get the rsult as an integer
     H_out = 1 + (H + 2 * pad - HH) // stride
-    W_out = 1 + (W + 2 * pad - WW) // stride
+    W_out = 1 + (W + 2 * pad- WW) // stride
 
     # Create the output array
     out = np.zeros((N, F, H_out, W_out))
@@ -661,7 +661,7 @@ def conv_backward_naive(dout, cache):
     """
     dx, dw, db = None, None, None
     ###########################################################################
-    # TODO: Implement the convolutional backward pass.                        #
+    # TODO11: Implement the convolutional backward pass.                        #
     ###########################################################################
 
     # Unpack the cache
@@ -730,9 +730,33 @@ def max_pool_forward_naive(x, pool_param):
     """
     out = None
     ###########################################################################
-    # TODO: Implement the max-pooling forward pass                            #
+    # TODO12: Implement the max-pooling forward pass                            #
     ###########################################################################
-    pass
+
+    # Shape of input
+    N, C, H, W = x.shape
+    # Shape of filter
+    # Not gonna provide a default value here as I trust the makers
+    HH, WW, stride = pool_param.get('pool_height'), pool_param.get('pool_width'), pool_param.get('stride')
+
+    # Calculate the output shape
+    # Not to self: Use // to get the rsult as an integer
+    H_out = 1 + (H - HH) // stride
+    W_out = 1 + (W - WW) // stride
+
+    # Create the output array
+    out = np.zeros((N, C, H_out, W_out))
+
+    # Perform the convolution
+    for n in range(N):  # For each data point
+        for i in range(H_out):  # For each row
+            for j in range(W_out): # For each column
+                # Extract the region that comes under the filter
+                x_region = x[n, :, i * stride:i * stride + HH, j * stride:j * stride + WW]
+                
+                # Perform the max pooling
+                # Note: We only have to perform max pooling on the last two dimensions
+                out[n, :, i, j] = np.amax(x_region, axis=(-1, -2))
     ###########################################################################
     #                             END OF YOUR CODE                            #
     ###########################################################################
@@ -753,8 +777,39 @@ def max_pool_backward_naive(dout, cache):
     """
     dx = None
     ###########################################################################
-    # TODO: Implement the max-pooling backward pass                           #
+    # TODO13: Implement the max-pooling backward pass                           #
     ###########################################################################
+
+    # Shape of input
+    x, pool_param = cache
+    N, C, H, W = x.shape
+    # Shape of filter
+    # Not gonna provide a default value here as I trust the makers
+    HH, WW, stride = pool_param.get('pool_height'), pool_param.get('pool_width'), pool_param.get('stride')
+
+    # Calculate the output shape
+    # Not to self: Use // to get the rsult as an integer
+    H_out = 1 + (H - HH) // stride
+    W_out = 1 + (W - WW) // stride
+
+    # Initialize the gradient
+    dx = np.zeros(x.shape)
+
+    for n in range(N):
+        for c in range(C):
+            for i in range(H_out):
+                for j in range(W_out):
+                    # Extract the region that comes under the filter
+                    x_region = x[n, c, i * stride:i * stride + HH, j * stride:j * stride + WW]
+
+                    # Find the indices of the maximum value
+                    indices = np.argmax(x_region)
+                    # Convert the indices to 2D array within the region
+                    index1, index2 = np.unravel_index(indices, (HH, WW))
+
+                    # Set the gradient of the maximum value to 1
+                    dx[n, c, i * stride:i * stride + HH, j * stride:j * stride + WW][index1, index2] = dout[n, c, i, j]
+
     pass
     ###########################################################################
     #                             END OF YOUR CODE                            #
