@@ -602,10 +602,43 @@ def conv_forward_naive(x, w, b, conv_param):
     """
     out = None
     ###########################################################################
-    # TODO: Implement the convolutional forward pass.                         #
+    # TODO10: Implement the convolutional forward pass.                         #
     # Hint: you can use the function np.pad for padding.                      #
     ###########################################################################
-    pass
+
+    # Unpack the parameters
+    stride, pad = conv_param['stride'], conv_param['pad']
+    # Shape of input
+    N, C, H, W = x.shape
+    # Shape of filter
+    F, C, HH, WW = w.shape
+
+    # Calculate the output shape
+    # Not to self: Use // to get the rsult as an integer
+    H_out = 1 + (H + 2 * pad - HH) // stride
+    W_out = 1 + (W + 2 * pad - WW) // stride
+
+    # Create the output array
+    out = np.zeros((N, F, H_out, W_out))
+
+    # Pad the input, but do not modify the original input
+    # Note that we have to pad only the height and width, not the number of channels
+    x_padded = np.pad(x, ((0, 0), (0, 0), (pad, pad), (pad, pad)), 'constant')
+
+    # Perform the convolution
+    for n in range(N):  # For each data point
+        for f in range(F):  # For each filter
+            for i in range(H_out):  # For each row
+                for j in range(W_out): # For each column
+                    # Extract the region that comes under the filter
+                    
+                    # Note to self: n => that particular data point, f => that particular filter, i => row, j => column
+                    # i * stride => start of the row, i * stride + HH => end of the row
+                    # j * stride => start of the column, j * stride + WW => end of the column
+                    x_region = x_padded[n, :, i * stride:i * stride + HH, j * stride:j * stride + WW]
+                    
+                    # Perform the convolution
+                    out[n, f, i, j] = np.sum(x_region * w[f]) + b[f] # bias is added
     ###########################################################################
     #                             END OF YOUR CODE                            #
     ###########################################################################
@@ -630,6 +663,45 @@ def conv_backward_naive(dout, cache):
     ###########################################################################
     # TODO: Implement the convolutional backward pass.                        #
     ###########################################################################
+
+    # Unpack the cache
+    x, w, b, conv_param = cache
+    stride, pad = conv_param['stride'], conv_param['pad']
+
+    # Pad the input
+    x_padded = np.pad(x, ((0, 0), (0, 0), (pad, pad), (pad, pad)), 'constant')
+
+    # Calculate the sizes of the input and output
+    N, C, H, W = x.shape
+    F, C, HH, WW = w.shape
+    H_output = 1 + (H + 2 * pad - HH) // stride
+    W_output = 1 + (W + 2 * pad - WW) // stride
+
+    # Initialize the gradients
+    dx = np.zeros_like(x)
+    dx_padded = np.zeros_like(x_padded)
+    dw = np.zeros_like(w)
+    db = np.zeros_like(b)
+
+    # Compute the gradients using naive loops
+    for n in range(N):
+        for f in range(F):
+            for i in range(H_output):
+                for j in range(W_output):
+                    # Extract the region that comes under the filter
+                    x_region = x_padded[n, :, i * stride:i * stride + HH, j * stride:j * stride + WW]
+
+                    # Compute the gradients
+                    dx_padded[n, :, i * stride:i * stride + HH, j * stride:j * stride + WW] += w[f] * dout[n, f, i, j]
+                    dw[f] += x_region * dout[n, f, i, j]
+
+                    # We can also move this up above the i and j loops since we have just one bias per filter
+                    # But I am keeping it here for better understanding
+                    db[f] += dout[n, f, i, j]
+    
+    # We need to extract the dx from the padded dx, since dx.shape should be equal to x.shape
+    dx = dx_padded[:, :, pad:pad + H, pad:pad + W]
+
     pass
     ###########################################################################
     #                             END OF YOUR CODE                            #
