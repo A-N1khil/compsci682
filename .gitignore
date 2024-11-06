@@ -9,3 +9,6 @@
 
 # VS Code settings file
 **/.vscode/*
+
+# PreTrainedModel
+**/*.pth
