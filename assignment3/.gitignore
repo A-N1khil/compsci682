@@ -1,1 +1,5 @@
 *.pth
+cs682/datasets/coco_captioning.zip.1
+cs682/datasets/imagenet_val_25.npz
+cs682/datasets/coco_captioning/*
+__pycache__/
