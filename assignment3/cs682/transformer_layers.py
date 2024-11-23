@@ -38,6 +38,14 @@ class PositionalEncoding(nn.Module):
         ############################################################################
         # *****START OF YOUR CODE (DO NOT DELETE/MODIFY THIS LINE)*****
 
+        # Get the column indices and the powers
+        i = torch.arange(0, max_len)[:, None]
+        powers = torch.pow(10000, -torch.arange(0, embed_dim, 2) / embed_dim)
+
+        # Compute the positional encodings
+        pe[0, :, 0::2] = torch.sin(i * powers)
+        pe[0, :, 1::2] = torch.cos(i * powers)
+
         pass
 
         # *****END OF YOUR CODE (DO NOT DELETE/MODIFY THIS LINE)*****
@@ -69,6 +77,10 @@ class PositionalEncoding(nn.Module):
         # afterward. This should only take a few lines of code.                    #
         ############################################################################
         # *****START OF YOUR CODE (DO NOT DELETE/MODIFY THIS LINE)*****
+
+        # Add the positional encodings
+        output = x + self.pe[:, :S]
+        output = self.dropout(output)
 
         pass
 
@@ -164,6 +176,33 @@ class MultiHeadAttention(nn.Module):
         #     function masked_fill may come in handy.                              #
         ############################################################################
         # *****START OF YOUR CODE (DO NOT DELETE/MODIFY THIS LINE)*****
+
+        # Get the number of heads
+        H = self.n_head
+
+        # Compute the query, key, and value for each head
+        K = self.key(key).view(N, T, H, self.head_dim).moveaxis(1, 2)
+        Q = self.query(query).view(N, S, H, self.head_dim).moveaxis(1, 2)
+        V = self.value(value).view(N, T, H, self.head_dim).moveaxis(1, 2)
+
+        # Compute the attention scores
+        # Transpose the key to get the correct shape for the matrix multiplication
+        Y = torch.matmul(Q, K.transpose(-2, -1)) / math.sqrt(self.head_dim)
+
+        # Apply the mask
+        if attn_mask is not None:
+            Y = Y.masked_fill(attn_mask==0, float('-inf'))
+        
+        # Compute the attention weights
+        A_softmax = F.softmax(Y, dim=-1)
+
+        # Apply dropout
+        A_dropout = self.attn_drop(A_softmax)
+
+        # Compute the output
+        output_head = torch.matmul(A_dropout, V)
+        output_reshaped = output_head.moveaxis(1,2).reshape(N, S, E)
+        output = self.proj(output_reshaped)
 
         pass
 
