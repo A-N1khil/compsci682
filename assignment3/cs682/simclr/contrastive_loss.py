@@ -18,8 +18,13 @@ def sim(z_i, z_j):
     #                                                                            #
     # HINT: torch.linalg.norm might be helpful.                                  #
     ##############################################################################
-    
-    
+
+    z_i_normalized = z_i / torch.linalg.norm(z_i)
+    z_j_normalized = z_j / torch.linalg.norm(z_j)
+
+    # Sum to return the value as a scalar
+    norm_dot_product = torch.matmul(z_i_normalized, z_j_normalized).sum()
+
     ##############################################################################
     #                               END OF YOUR CODE                             #
     ##############################################################################
@@ -55,6 +60,28 @@ def simclr_loss_naive(out_left, out_right, tau):
         # Hint: Compute l(k, k+N) and l(k+N, k).                                     #
         ##############################################################################
         # *****START OF YOUR CODE (DO NOT DELETE/MODIFY THIS LINE)*****
+
+        # Find similarities (k, k+N)
+        sims_k = []
+        for z in out[torch.arange(2*N) != k]:
+          sims_k.append(sim(z_k, z))
+        sims_k = torch.tensor(sims_k)
+
+        # Find similarities (k+N, k)
+        sims_k_N = []
+        for z in out[torch.arange(2*N) != k+N]:
+          sims_k_N.append(sim(z_k_N, z))
+        sims_k_N = torch.tensor(sims_k_N)
+
+        # Now that we have both the similarity scores, let's compute the loss
+        # 
+        l_k = -(sim(z_k, z_k_N) / tau) + torch.logsumexp(sims_k/tau, dim=0)
+        l_k_N = -(sim(z_k_N, z_k) / tau) + torch.logsumexp(sims_k_N/tau, dim=0)
+
+        # l_k = -((sim(z_k, z_k_N) / tau).exp() / (sims_k / tau).exp().sum()).log()
+        # l_k_N = -((sim(z_k_N, z_k) / tau).exp() / (sims_k_N / tau).exp().sum()).log()
+
+        total_loss += l_k + l_k_N
 
         pass
 
