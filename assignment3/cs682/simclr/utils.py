@@ -36,6 +36,14 @@ def train(model, data_loader, train_optimizer, epoch, epochs, batch_size=32, tem
         # Run x_i and x_j through the model to get out_left, out_right.              #
         # Then compute the loss using simclr_loss_vectorized.                        #
         ##############################################################################
+
+        # Forward pass through the model gives 2 outputs (features and the output)
+        # We are only concerned with the output
+        _, out_left = model(x_i)
+        _, out_right = model(x_j)
+
+        # Now we compute the SimCLR loss
+        loss = simclr_loss_vectorized(out_left, out_right, temperature, device)
         
         
         ##############################################################################
